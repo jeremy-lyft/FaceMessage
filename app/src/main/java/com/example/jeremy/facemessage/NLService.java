@@ -19,8 +19,8 @@ import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
-//import com.getpebble.android.kit.PebbleKit;
-//import com.getpebble.android.kit.util.PebbleDictionary;
+import com.getpebble.android.kit.PebbleKit;
+import com.getpebble.android.kit.util.PebbleDictionary;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class NLService extends NotificationListenerService {
 
     private String TAG = this.getClass().getSimpleName();
     private NLServiceReceiver nlservicereciver;
-    private final static UUID PEBBLE_APP_UUID = UUID.fromString("EC7EE5C6-8DDF-4089-AA84-C3396A11CC95");
+    private final static UUID PEBBLE_APP_UUID = UUID.fromString("ad048612-0de1-46e7-be4a-a34eac4e51d2");
 
     @Override
     public void onCreate() {
@@ -47,19 +47,19 @@ public class NLService extends NotificationListenerService {
         super.onDestroy();
         unregisterReceiver(nlservicereciver);
     }
-//    public void sendSentimentAndMessage(String sentiments, String message) {
-//        boolean connected = PebbleKit.isWatchConnected(getApplicationContext());
-//        Log.i(getLocalClassName(), "Pebble is " + (connected ? "connected" : "not connected"));
-//
-//        PebbleDictionary data = new PebbleDictionary();
-//
-//        // Add a key of 0, and a uint8_t (byte) of value 42.
-//        data.addUint8(0, (byte) 42);
-//
-//        data.addString("message", message);
-//        data.addString("sentiment", sentiments);
-//        PebbleKit.sendDataToPebble(getApplicationContext(), PEBBLE_APP_UUID, data);
-//    }
+    public void sendSentimentAndMessage(String sentiments, String message) {
+        boolean connected = PebbleKit.isWatchConnected(getApplicationContext());
+        Log.i(TAG, "Pebble is " + (connected ? "connected" : "not connected"));
+
+        PebbleDictionary data = new PebbleDictionary();
+
+        // Add a key of 0, and a uint8_t (byte) of value 42.
+        data.addUint8(0, (byte) 42);
+
+        data.addString(1, message);
+        data.addString(2, sentiments);
+        PebbleKit.sendDataToPebble(getApplicationContext(), PEBBLE_APP_UUID, data);
+    }
 
     public String getSentiment(String message) throws IOException {
         String sentiment = "";
@@ -104,18 +104,25 @@ public class NLService extends NotificationListenerService {
         i.putExtra("notification_event", "Message is: " + message + "\n");
         sendBroadcast(i);
 
-        String sentiments = "Happy!";
+        Float sentimentScore;
         try {
             Log.d(TAG, "before request");
-            sentiments = this.getSentiment(message);
+            sentimentScore = Float.parseFloat(getSentiment(message));
         } catch (IOException e) {
-            sentiments = "crashed;";
+            sentimentScore = Float.parseFloat("0.0");
         }
-
+        String sentiments = "Happy!";
+        if (sentimentScore > 0.1) {
+            sentiments = "happy";
+        } else if (sentimentScore > -0.1 && sentimentScore <= 0.1) {
+            sentiments = "neutral";
+        } else {
+            sentiments = "sad";
+        }
         i.putExtra("notification_event", "Sentiment is: " + sentiments + "\n");
         sendBroadcast(i);
 
-        //this.sendSentimentAndMessage(sentiments, message);
+        this.sendSentimentAndMessage(sentiments, message);
 
         i.putExtra("notification_event", "==========Done! Sent to watch!===========\n");
         sendBroadcast(i);
